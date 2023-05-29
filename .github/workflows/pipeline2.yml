@@ -9,7 +9,7 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: "us-east-1"
-  PROJECT_NAME: "conchayoro"
+  PROJECT_NAME: "conchayoronew"
   MODULE_NAME: "backend"
   TAG: "latest"
   STACK_NAME: "64bit Amazon Linux 2 v3.5.7 running Docker"
