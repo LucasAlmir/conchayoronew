@@ -1,4 +1,4 @@
-name: conchayoro-pipeline1
+name: conchayoro-pipeline
 
 on:
   push:
@@ -20,14 +20,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-        
+
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-          
+
       - name: Create Elastic Beanstalk environment
         run: |
           aws elasticbeanstalk create-application --application-name $PROJECT_NAME --region $AWS_REGION
@@ -38,22 +38,33 @@ jobs:
           eb init $PROJECT_NAME --region $AWS_REGION --platform "$STACK_NAME" --platform-version 3.5.7
           eb use $MODULE_NAME
 
+      - name: Deploy application to Elastic Beanstalk
+        run: |
+          eb deploy $MODULE_NAME
+
+      - name: Set up AWS credentials for ECR
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create ECR repository
+        run: |
+          aws ecr create-repository --repository-name $PROJECT_NAME/$MODULE_NAME --region $AWS_REGION
+
       - name: Build Docker image
         run: |
           docker build -t $PROJECT_NAME/$MODULE_NAME $MODULE_NAME/.
 
       - name: Tag Docker image
         run: |
-          docker tag $PROJECT_NAME/$MODULE_NAME:$TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME/$MODULE_NAME:$TAG
+          docker tag $PROJECT_NAME/$MODULE_NAME:$TAG ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$PROJECT_NAME/$MODULE_NAME:$TAG
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
       - name: Push Docker image to ECR
         run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME/$MODULE_NAME:$TAG
-
-      - name: Deploy application to Elastic Beanstalk
-        run: |
-          eb deploy $MODULE_NAME
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$PROJECT_NAME/$MODULE_NAME:$TAG
